@@ -9,12 +9,13 @@ import { cn } from '@/lib/cn';
 import { fromOption, lgaOptions, settlementOptions, stateOptions, toOption, wardOptions, plural } from './filters';
 import { areaName, crumbs, delta, LEVEL_LABEL, levelPlural, rag, useLineList, waiting } from './common';
 import { Check, FilterSelect, PeriodChip, PeriodFilter, Shell } from './ui';
-import { Card, Chip, Crumbs, KpiCard, RagLegend, Seg } from './kit';
+import { Card, Chip, ComparisonBar, Crumbs, KpiCard, RagLegend, Seg } from './kit';
 import { CELL, NUM_CELL, PALETTE, RAG_CELL, TOTAL_CELL } from './theme';
 
 const SOURCE = 'Optimus line list';
 
-type SortKey = 'name' | 'settlements' | 'zid' | 'zconv' | 'zrc' | 'uid' | 'uconv' | 'urc' | 'wait';
+type SortKey = 'name' | 'settlements' | 'zid' | 'zref' | 'zvac' | 'zconv' | 'zrc' | 'uid' | 'uref' | 'uvac' | 'uconv' | 'urc' | 'wait';
+type ComparisonView = 'waiting' | 'conversion' | 'vaccination';
 
 const found = (t: LineListRow) => t.zdc.identified + t.uic.identified;
 const vaccinated = (t: LineListRow) => t.zdc.vaccinated + t.uic.vaccinated;
@@ -22,6 +23,7 @@ const vaccinated = (t: LineListRow) => t.zdc.vaccinated + t.uic.vaccinated;
 export function LineListPage({ ds }: { ds: Dataset }) {
   const { f, set, periodKey, period, s, level, drill, prev, prevPeriod, trend } = useLineList(ds);
   const [actGroup, setActGroup] = useState<'all' | 'zdc' | 'uic'>('all');
+  const [comparisonView, setComparisonView] = useState<ComparisonView>('waiting');
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'wait', dir: -1 });
 
   const T = s.total;
@@ -47,8 +49,21 @@ export function LineListPage({ ds }: { ds: Dataset }) {
         : found(r) === 0
           ? null
           : (vaccinated(r) / found(r)) * 100;
-  const act = [...s.rows].filter((r) => found(r) > 0).sort((a, b) => waitOf(b) - waitOf(a)).slice(0, 7);
+  const foundOf = (r: LineListRow) => actGroup === 'all' ? found(r) : r[actGroup].identified;
+  const vaccinatedOf = (r: LineListRow) => actGroup === 'all' ? vaccinated(r) : r[actGroup].vaccinated;
+  const act = comparisonView === 'waiting'
+    ? [...s.rows].filter((r) => foundOf(r) > 0).sort((a, b) => waitOf(b) - waitOf(a)).slice(0, 7)
+    : [...s.rows].sort((a, b) => comparisonView === 'conversion'
+      ? (convOf(a) ?? Infinity) - (convOf(b) ?? Infinity) || a.label.localeCompare(b.label)
+      : foundOf(b) - foundOf(a) || a.label.localeCompare(b.label));
   const maxWait = Math.max(1, ...act.map(waitOf));
+  const maxFound = Math.max(1, ...act.map(foundOf));
+  const comparisonTitle = comparisonView === 'waiting' ? 'Where to act first'
+    : comparisonView === 'conversion' ? `Conversion by ${unit}` : `Identified vs vaccinated by ${unit}`;
+  const comparisonHint = comparisonView === 'waiting'
+    ? `${levelPlural(level)[0].toUpperCase()}${levelPlural(level).slice(1)} with the most children still waiting · click to drill in`
+    : comparisonView === 'conversion' ? 'Lowest conversion first · vaccinated ÷ identified · click to drill in'
+      : 'Children in the same identification cohort · highest identified first · click to drill in';
 
   const sortVal = (r: LineListRow, k: SortKey): number | string => {
     const z = pathwayRates(r.zdc);
@@ -57,9 +72,13 @@ export function LineListPage({ ds }: { ds: Dataset }) {
       name: r.label,
       settlements: r.settlements,
       zid: r.zdc.identified,
+      zref: r.zdc.referred,
+      zvac: r.zdc.vaccinated,
       zconv: z.conversion ?? -1,
       zrc: z.referralCompletion ?? -1,
       uid: r.uic.identified,
+      uref: r.uic.referred,
+      uvac: r.uic.vaccinated,
       uconv: u.conversion ?? -1,
       urc: u.referralCompletion ?? -1,
       wait: waiting(r),
@@ -162,7 +181,18 @@ export function LineListPage({ ds }: { ds: Dataset }) {
           compareLabel={cmp}
           fallback={fallback}
           spark={spark(waiting)}
-          sub={`${fmtInt(pathwayRates(T.zdc).referredPending + pathwayRates(T.uic).referredPending)} referred and not yet vaccinated`}
+          sub={`${fmtInt(pathwayRates(T.zdc).referredPending + pathwayRates(T.uic).referredPending)} awaiting a post-referral vaccination`}
+          details={
+            <table className="mt-3 w-full border-t border-white/15 text-[11px] tabular" aria-label="Follow-up breakdown">
+              <thead className="text-white/65">
+                <tr><th scope="col" className="pb-1 pt-2 text-left font-medium">Group</th><th scope="col" className="pb-1 pt-2 text-right font-medium">Unvaccinated</th><th scope="col" className="pb-1 pt-2 text-right font-medium" title="Referred minus children vaccinated after referral">Referral pending</th></tr>
+              </thead>
+              <tbody>{(['zdc', 'uic'] as const).map((k) => {
+                const p = pathwayRates(T[k]);
+                return <tr key={k}><th scope="row" className="py-1 text-left font-medium">{k.toUpperCase()}</th><td className="py-1 text-right">{fmtInt(p.notVaccinated)}</td><td className="py-1 text-right">{fmtInt(p.referredPending)}</td></tr>;
+              })}</tbody>
+            </table>
+          }
         />
         <KpiCard
           label="Settlements reached"
@@ -185,8 +215,8 @@ export function LineListPage({ ds }: { ds: Dataset }) {
           </div>
         </Card>
         <Card
-          title="Where to act first"
-          hint={`${levelPlural(level)[0].toUpperCase()}${levelPlural(level).slice(1)} with the most children still waiting · click to drill in`}
+          title={comparisonTitle}
+          hint={comparisonHint}
           action={
             <Seg
               label="Children"
@@ -200,10 +230,19 @@ export function LineListPage({ ds }: { ds: Dataset }) {
             />
           }
         >
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <label className="flex items-center gap-2 text-[12px] text-[#657264]">
+              View
+              <select aria-label="Comparison view" value={comparisonView} onChange={(e) => setComparisonView(e.target.value as ComparisonView)} className="rounded-lg border border-[#E4E9DF] bg-white px-2 py-1.5 text-[#253E33]">
+                <option value="waiting">Follow-up priority</option><option value="conversion">Conversion ranking</option><option value="vaccination">Identified vs vaccinated</option>
+              </select>
+            </label>
+            {comparisonView === 'vaccination' && <span className="flex gap-3 text-[11px] text-[#657264]"><span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-[#B3C8BC]" />Identified</span><span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-[#37896F]" />Vaccinated</span></span>}
+          </div>
           {act.length === 0 ? (
             <p className="py-8 text-center text-[13px] text-[#667085]">No children identified here in this period.</p>
           ) : (
-            <ol className="flex flex-col">
+            <ol className="flex max-h-[450px] flex-col overflow-y-auto">
               {act.map((r, i) => {
                 const patch = drill(r.key);
                 const c = convOf(r);
@@ -218,12 +257,15 @@ export function LineListPage({ ds }: { ds: Dataset }) {
                       <span className="grid h-[22px] w-[22px] place-items-center rounded-md bg-[#F2F4F7] text-[11px] font-bold text-[#657264]">{i + 1}</span>
                       <span className="min-w-0">
                         <span className="block truncate text-[14px] font-semibold">{r.label}</span>
-                        <span className="mt-1 flex items-center gap-2 text-[12px] text-[#667085]">
+                        {comparisonView === 'vaccination' ? <span className="mt-1.5 flex flex-col gap-1.5">
+                          <ComparisonBar label="Identified" value={foundOf(r)} max={maxFound} color="#B3C8BC" />
+                          <ComparisonBar label="Vaccinated" value={vaccinatedOf(r)} max={maxFound} color="#37896F" />
+                        </span> : <span className="mt-1 flex items-center gap-2 text-[12px] text-[#667085]">
                           <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#F2F4F7]">
-                            <span className="block h-full rounded-full bg-[#E5484D]" style={{ width: `${(waitOf(r) / maxWait) * 100}%` }} />
+                            <span className="block h-full rounded-full" style={{ width: `${comparisonView === 'conversion' ? c ?? 0 : (waitOf(r) / maxWait) * 100}%`, background: comparisonView === 'conversion' ? PALETTE.zdc : '#E5484D' }} />
                           </span>
-                          <span className="whitespace-nowrap tabular">{fmtInt(waitOf(r))} waiting</span>
-                        </span>
+                          {comparisonView === 'waiting' && <span className="whitespace-nowrap tabular">{fmtInt(waitOf(r))} waiting</span>}
+                        </span>}
                       </span>
                       <Chip rag={rag(c)}>{fmtPct(c, 0)} converted</Chip>
                     </button>
@@ -232,6 +274,7 @@ export function LineListPage({ ds }: { ds: Dataset }) {
               })}
             </ol>
           )}
+          <p className="mt-3 text-[11px] text-[#667085]">{comparisonView === 'waiting' ? 'Top 7 areas' : `All ${act.length} ${levelPlural(level)} · scroll to compare`} · {periodRangeLabel(period)} · {SOURCE}</p>
         </Card>
       </div>
 
@@ -240,8 +283,8 @@ export function LineListPage({ ds }: { ds: Dataset }) {
         title={`${unit} scorecard`}
         hint={`Every ${unitLower} in ${name} · click a column to sort${level !== 'settlement' ? ', a row to drill in' : ''}`}
       >
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] border-separate border-spacing-[3px] text-[12.5px]">
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Scroll line-list scorecard">
+          <table aria-label={`${unit} line-list scorecard`} className="scorecard-table w-full min-w-[1300px] border-separate border-spacing-[3px] text-[12.5px]">
             <thead className="text-[11px] text-[#667085]">
               <tr>
                 <Th k="name" left>
@@ -250,9 +293,13 @@ export function LineListPage({ ds }: { ds: Dataset }) {
                 {showState && <th className="px-2 text-left font-semibold">State</th>}
                 <Th k="settlements">Settlements</Th>
                 <Th k="zid">ZDC found</Th>
+                <Th k="zref">ZDC referred</Th>
+                <Th k="zvac">ZDC vaccinated</Th>
                 <Th k="zconv">ZDC conversion</Th>
                 <Th k="zrc">ZDC referral completion</Th>
                 <Th k="uid">UIC found</Th>
+                <Th k="uref">UIC referred</Th>
+                <Th k="uvac">UIC vaccinated</Th>
                 <Th k="uconv">UIC conversion</Th>
                 <Th k="urc">UIC referral completion</Th>
                 <Th k="wait">Waiting</Th>
@@ -269,9 +316,13 @@ export function LineListPage({ ds }: { ds: Dataset }) {
                     {showState && <td className="px-2 text-[#667085]">{getState(r.stateId)?.name}</td>}
                     {numCell(r.settlements)}
                     {numCell(r.zdc.identified)}
+                    {numCell(r.zdc.referred)}
+                    {numCell(r.zdc.vaccinated)}
                     {pctCell(z.conversion)}
                     {pctCell(z.referralCompletion)}
                     {numCell(r.uic.identified)}
+                    {numCell(r.uic.referred)}
+                    {numCell(r.uic.vaccinated)}
                     {pctCell(u.conversion)}
                     {pctCell(u.referralCompletion)}
                     <td className={cn(CELL, 'bg-[#FDECEC] text-[#B4232A]')}>{fmtInt(waiting(r))}</td>
@@ -283,9 +334,13 @@ export function LineListPage({ ds }: { ds: Dataset }) {
                 {showState && <td className="border-t-2 border-[#204F3F]" />}
                 <td className={TOTAL_CELL}>{fmtInt(T.settlements)}</td>
                 <td className={TOTAL_CELL}>{fmtInt(T.zdc.identified)}</td>
+                <td className={TOTAL_CELL}>{fmtInt(T.zdc.referred)}</td>
+                <td className={TOTAL_CELL}>{fmtInt(T.zdc.vaccinated)}</td>
                 <td className={TOTAL_CELL}>{fmtPct(pathwayRates(T.zdc).conversion)}</td>
                 <td className={TOTAL_CELL}>{fmtPct(pathwayRates(T.zdc).referralCompletion)}</td>
                 <td className={TOTAL_CELL}>{fmtInt(T.uic.identified)}</td>
+                <td className={TOTAL_CELL}>{fmtInt(T.uic.referred)}</td>
+                <td className={TOTAL_CELL}>{fmtInt(T.uic.vaccinated)}</td>
                 <td className={TOTAL_CELL}>{fmtPct(pathwayRates(T.uic).conversion)}</td>
                 <td className={TOTAL_CELL}>{fmtPct(pathwayRates(T.uic).referralCompletion)}</td>
                 <td className={cn(TOTAL_CELL, 'text-[#B4232A]')}>{fmtInt(waiting(T))}</td>
@@ -342,6 +397,7 @@ function Journey({ label, counts, color, light }: { label: string; counts: Pathw
           {step(counts.vaccinated, 'Vaccinated', color, '#fff')}
           {drop(counts.referred - counts.vaccinated)}
         </div>
+        <p className="text-[11px] text-[#657264]">Vaccinated after referral: <b className="tabular">{fmtInt(counts.vaccinatedAfterReferral)}</b></p>
       </div>
     </div>
   );

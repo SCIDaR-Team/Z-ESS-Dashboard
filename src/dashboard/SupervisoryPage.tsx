@@ -11,7 +11,7 @@ import { cn } from '@/lib/cn';
 import { fromOption, lgaOptions, stateOptions, toOption, plural } from './filters';
 import { areaName, crumbs, delta, geoOnly, LEVEL_LABEL, rag, useSupervisoryData, type Rag } from './common';
 import { Check, FilterSelect, PeriodChip, PeriodFilter, Shell } from './ui';
-import { Card, Chip, Crumbs, KpiCard, RagLegend, Seg } from './kit';
+import { Card, Chip, ComparisonBar, Crumbs, KpiCard, RagLegend, Seg } from './kit';
 import { CELL, NUM_CELL, PALETTE, RAG_CELL, TOTAL_CELL } from './theme';
 
 const SOURCE = 'Supervisory checklist';
@@ -19,6 +19,8 @@ const SOURCE = 'Supervisory checklist';
 export function SupervisoryPage({ ds }: { ds: Dataset }) {
   const { f, set, periodKey, period, sup, tgt, level, drill, prev, prevPeriod, trend } = useSupervisoryData(ds);
   const [group, setGroup] = useState<'zdc' | 'uic'>('zdc');
+  const [showCommunityDetails, setShowCommunityDetails] = useState(false);
+  const [doseView, setDoseView] = useState<'table' | 'penta1' | 'penta3'>('table');
   const T = sup.total;
   const R = supervisoryRates(T);
   const name = areaName(ds, f);
@@ -41,6 +43,13 @@ export function SupervisoryPage({ ds }: { ds: Dataset }) {
   const totalLabel = level === 'lga' ? 'All LGAs' : 'Total';
   const silent = (level === 'lga' ? sup.rows : []).filter((r) => r.reports === 0);
   const maxDose = Math.max(1, ...OTHER_ANTIGENS.map((a) => T.doses[a]));
+  const showTargets = level === 'lga';
+  const comparisonDose = doseView === 'penta3' ? 'Penta3' : 'Penta1';
+  const comparisonGroup = doseView === 'penta3' ? 'UIC' : 'ZDC';
+  const comparisonLight = doseView === 'penta3' ? '#B7D7CA' : '#C4D1EB';
+  const comparisonColor = doseView === 'penta3' ? PALETTE.uic : PALETTE.zdc;
+  const linkedDoses = (r: typeof T) => doseView === 'penta3' ? r.penta3ToUic : r.penta1ToZdc;
+  const comparisonMax = Math.max(1, ...sup.rows.flatMap((r) => [r.doses[comparisonDose], linkedDoses(r)]));
 
   const filters = (
     <>
@@ -202,12 +211,26 @@ export function SupervisoryPage({ ds }: { ds: Dataset }) {
         </div>
       </div>
 
-      <Card className="mt-4" title={`${unit} scorecard`} hint={`Every ${unitLower} in ${name}${level === 'lga' ? ' · click a row to drill in' : ''}`}>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] border-separate border-spacing-[3px] text-[12.5px]">
+      <Card
+        className="mt-4"
+        title={`${unit} scorecard`}
+        hint={`Every ${unitLower} in ${name}${showTargets ? ' · targets and remaining children are counts · click a row to drill in' : ''}`}
+        action={<button type="button" aria-expanded={showCommunityDetails} aria-controls="supervisory-scorecard" onClick={() => setShowCommunityDetails((v) => !v)} className="rounded-lg border border-[#E4E9DF] px-3 py-1.5 text-[12px] font-semibold hover:bg-[#F4F7F1]">{showCommunityDetails ? 'Hide community counts' : 'Show community counts'}</button>}
+      >
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Scroll supervisory scorecard">
+          <table id="supervisory-scorecard" aria-label={`${unit} supervisory scorecard`} className={cn('scorecard-table w-full border-separate border-spacing-[3px] text-[12.5px]', showCommunityDetails ? 'min-w-[1900px]' : 'min-w-[1300px]')}>
             <thead className="text-[11px] text-[#667085]">
               <tr>
-                {[unit, 'Reports', 'Settlements', 'ZDC found', 'ZDC target', 'UIC found', 'UIC target', 'Penta1 to ZDC', 'Penta3 to UIC', 'Household conversion', 'Rumour resolution'].map((h, i) => (
+                {[
+                  unit, 'Reports', 'Settlements', 'ZDC found',
+                  ...(showTargets ? ['ZDC target', 'ZDC achievement %', 'ZDC remaining'] : []),
+                  'UIC found', ...(showTargets ? ['UIC target', 'UIC achievement %', 'UIC remaining'] : []),
+                  'Penta1 ZDC share %', 'Penta3 UIC share %',
+                  ...(showCommunityDetails ? ['Households identified', 'Households followed up', 'Households converted'] : []),
+                  'Household conversion %',
+                  ...(showCommunityDetails ? ['Rumours identified', 'Rumours addressed'] : []),
+                  'Rumour resolution %',
+                ].map((h, i) => (
                   <th key={h} scope="col" className={cn('px-2 py-1.5 font-semibold', i === 0 ? 'text-left' : 'text-center')}>
                     {h}
                   </th>
@@ -219,21 +242,22 @@ export function SupervisoryPage({ ds }: { ds: Dataset }) {
                 const t = tgtByKey.get(r.key);
                 const rr = supervisoryRates(r);
                 const patch = drill(r.key);
-                const num = (v: number) => <td className={NUM_CELL}>{fmtInt(v)}</td>;
+                const num = (v: number | null | undefined) => <td className={NUM_CELL}>{fmtInt(v)}</td>;
                 const cell = (v: number | null, rg: Rag) => <td className={cn(CELL, RAG_CELL[rg])}>{fmtPct(v)}</td>;
-                const none = <td className="text-center text-[#93A28C]">—</td>;
                 return (
                   <tr key={r.key} onClick={() => patch && set(patch)} className={cn(patch && 'cursor-pointer [&>td:first-child]:hover:text-[#597DC2]')}>
                     <td className="px-2 py-1.5 font-semibold">{r.label}</td>
                     {r.reports === 0 ? <td className={cn(CELL, 'bg-[#FDECEC] text-[#B4232A]')}>None</td> : num(r.reports)}
                     {num(r.settlements)}
                     {num(r.zdcIdentified)}
-                    {t ? cell(t.zdc.achievement, achRag(t.zdc.achievement)) : none}
+                    {showTargets && <>{num(t?.zdc.target)}{cell(t?.zdc.achievement ?? null, achRag(t?.zdc.achievement ?? null))}{num(t?.zdc.remaining)}</>}
                     {num(r.uicIdentified)}
-                    {t ? cell(t.uic.achievement, achRag(t.uic.achievement)) : none}
+                    {showTargets && <>{num(t?.uic.target)}{cell(t?.uic.achievement ?? null, achRag(t?.uic.achievement ?? null))}{num(t?.uic.remaining)}</>}
                     {cell(rr.penta1ZdcShare, 'none')}
                     {cell(rr.penta3UicShare, 'none')}
+                    {showCommunityDetails && <>{num(r.households.identified)}{num(r.households.followedUp)}{num(r.households.converted)}</>}
                     {cell(rr.householdConversion, rag(rr.householdConversion))}
+                    {showCommunityDetails && <>{num(r.rumours.identified)}{num(r.rumours.addressed)}</>}
                     {cell(rr.rumourResolution, rag(rr.rumourResolution))}
                   </tr>
                 );
@@ -243,12 +267,14 @@ export function SupervisoryPage({ ds }: { ds: Dataset }) {
                 <td className={TOTAL_CELL}>{fmtInt(T.reports)}</td>
                 <td className={TOTAL_CELL}>{fmtInt(T.settlements)}</td>
                 <td className={TOTAL_CELL}>{fmtInt(T.zdcIdentified)}</td>
-                <td className={TOTAL_CELL}>{level === 'lga' ? fmtPct(tgt.total.zdc.achievement) : '—'}</td>
+                {showTargets && <><td className={TOTAL_CELL}>{fmtInt(tgt.total.zdc.target)}</td><td className={TOTAL_CELL}>{fmtPct(tgt.total.zdc.achievement)}</td><td className={TOTAL_CELL}>{fmtInt(tgt.total.zdc.remaining)}</td></>}
                 <td className={TOTAL_CELL}>{fmtInt(T.uicIdentified)}</td>
-                <td className={TOTAL_CELL}>{level === 'lga' ? fmtPct(tgt.total.uic.achievement) : '—'}</td>
+                {showTargets && <><td className={TOTAL_CELL}>{fmtInt(tgt.total.uic.target)}</td><td className={TOTAL_CELL}>{fmtPct(tgt.total.uic.achievement)}</td><td className={TOTAL_CELL}>{fmtInt(tgt.total.uic.remaining)}</td></>}
                 <td className={TOTAL_CELL}>{fmtPct(R.penta1ZdcShare)}</td>
                 <td className={TOTAL_CELL}>{fmtPct(R.penta3UicShare)}</td>
+                {showCommunityDetails && <><td className={TOTAL_CELL}>{fmtInt(T.households.identified)}</td><td className={TOTAL_CELL}>{fmtInt(T.households.followedUp)}</td><td className={TOTAL_CELL}>{fmtInt(T.households.converted)}</td></>}
                 <td className={TOTAL_CELL}>{fmtPct(R.householdConversion)}</td>
+                {showCommunityDetails && <><td className={TOTAL_CELL}>{fmtInt(T.rumours.identified)}</td><td className={TOTAL_CELL}>{fmtInt(T.rumours.addressed)}</td></>}
                 <td className={TOTAL_CELL}>{fmtPct(R.rumourResolution)}</td>
               </tr>
             </tbody>
@@ -267,8 +293,30 @@ export function SupervisoryPage({ ds }: { ds: Dataset }) {
         className="mt-4"
         title={`Vaccine doses by ${unitLower}`}
         hint={`Doses given, ${periodRangeLabel(period)} · Penta1 and Penta3 shown with the doses given to identified ZDC and UIC`}
+        action={<Seg label="Vaccine view" value={doseView} onChange={setDoseView} options={[{ value: 'table', label: 'Table' }, { value: 'penta1', label: 'Penta1' }, { value: 'penta3', label: 'Penta3' }]} />}
       >
-        <div className="overflow-x-auto">
+        {doseView !== 'table' ? <>
+          <div className="mb-3 flex flex-wrap gap-x-5 gap-y-1 text-[12px] text-[#657264]">
+            <span><i className="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm" style={{ background: comparisonLight }} />All {comparisonDose} doses</span>
+            <span><i className="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm" style={{ background: comparisonColor }} />{comparisonDose} doses to {comparisonGroup}</span>
+          </div>
+          <ul className="max-h-[460px] overflow-y-auto" aria-label={`${comparisonDose} dose comparison`}>
+            {sup.rows.map((r) => {
+              const patch = drill(r.key);
+              const subset = linkedDoses(r);
+              return <li key={r.key} className="border-t border-[#E4E9DF] first:border-t-0">
+                <button type="button" disabled={!patch} onClick={() => patch && set(patch)} className="grid w-full grid-cols-[88px_minmax(0,1fr)] items-center gap-3 rounded-lg px-1 py-3 text-left enabled:hover:bg-[#F9FAFB] sm:grid-cols-[140px_minmax(0,1fr)]">
+                  <span className="truncate text-[13px] font-semibold">{r.label}</span>
+                  <span className="flex flex-col gap-2">
+                    <ComparisonBar label={`All ${comparisonDose} doses`} value={r.doses[comparisonDose]} max={comparisonMax} color={comparisonLight} />
+                    <ComparisonBar label={`${comparisonDose} doses to ${comparisonGroup}`} value={subset} max={comparisonMax} color={comparisonColor} flagged={subset > r.doses[comparisonDose]} />
+                  </span>
+                </button>
+              </li>;
+            })}
+          </ul>
+          <p className="mt-3 text-[11px] text-[#667085]">All {sup.rows.length} {level === 'lga' ? 'LGAs' : 'settlements'} · scroll to compare · {periodRangeLabel(period)} · {SOURCE}</p>
+        </> : <div className="overflow-x-auto">
           <table className="w-full min-w-[1080px] border-separate border-spacing-[3px] text-[12.5px]">
             <thead className="text-[11px] text-[#667085]">
               <tr>
@@ -322,7 +370,7 @@ export function SupervisoryPage({ ds }: { ds: Dataset }) {
               </tr>
             </tbody>
           </table>
-        </div>
+        </div>}
       </Card>
 
       <Card id="data-quality" className="mt-4" title="Data quality" hint={`Checks on the ${SOURCE}`}>

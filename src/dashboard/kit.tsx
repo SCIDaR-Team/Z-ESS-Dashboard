@@ -2,10 +2,30 @@ import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { ArrowDownRight, ArrowRight, ArrowUpRight, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { fmtInt } from '@/lib/format';
 import type { Crumb, Delta, Rag } from './common';
 import { RAG_CELL, TONE, type Tone } from './theme';
 
 export type { Tone };
+
+export function ComparisonBar({ label, value, max, color, flagged = false }: {
+  label: string;
+  value: number;
+  max: number;
+  color: string;
+  flagged?: boolean;
+}) {
+  return (
+    <span className="flex items-center gap-2 text-[11.5px] text-[#657264]" aria-label={`${label}: ${fmtInt(value)}`}>
+      <span className="h-2.5 flex-1 rounded-full bg-[#EEF1F6]">
+        <span className="block h-full rounded-full" style={{ width: `${value / Math.max(1, max) * 100}%`, background: color }} />
+      </span>
+      <span className={cn('w-14 text-right tabular', flagged && 'text-[#B4232A]')} title={flagged ? 'Subset exceeds total doses — flagged for review' : undefined}>
+        {fmtInt(value)}
+      </span>
+    </span>
+  );
+}
 
 /** Soft white card: large radius, faint shadow, no border. */
 export function Card({
@@ -102,6 +122,7 @@ export function KpiCard({
   label,
   value,
   sub,
+  details,
   icon: Icon,
   tone,
   delta,
@@ -113,6 +134,7 @@ export function KpiCard({
   label: string;
   value: string;
   sub?: ReactNode;
+  details?: ReactNode;
   icon: LucideIcon;
   tone: Tone;
   delta: Delta | null;
@@ -152,6 +174,7 @@ export function KpiCard({
         )}
       </div>
       {sub && <p className={cn('mt-1.5 text-[12px]', featured ? 'text-white/60' : 'text-[#667085]')}>{sub}</p>}
+      {details}
     </div>
   );
 }

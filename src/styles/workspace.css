@@ -143,3 +143,12 @@
 
 @media (max-width: 900px) { .workspace-sidebar { visibility: hidden; }.workspace-sidebar.mobile-open { visibility: visible; } }
 @media (max-width: 650px) { .hero-copy h2 { font-size: 32px; letter-spacing: -1.2px; } }
+
+.scorecard-table tr > :first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 130px;
+  background: #fff;
+  box-shadow: 3px 0 0 #fff;
+}

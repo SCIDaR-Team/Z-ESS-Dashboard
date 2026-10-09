@@ -8,3 +8,6 @@ dist/
 .DS_Store
 *.tsbuildinfo
 coverage/
+
+# Client brief — reference material, kept out of the repo
+/20261006_Z-ESS_Synterra_Dashboard_Brief.pdf

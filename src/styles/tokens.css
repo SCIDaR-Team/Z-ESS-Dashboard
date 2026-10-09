@@ -1,0 +1,63 @@
+/**
+ * Z-ESS design tokens. Colours are space-separated RGB channels so Tailwind's
+ * opacity modifier works. `.dark` on <html> selects the dark palette.
+ *
+ * ZDC is blue and UIC is green throughout, matching the brief's mockups.
+ */
+
+:root,
+.light {
+  --c-bg: 244 246 249;
+  --c-bg-elev: 255 255 255;
+  --c-bg-elev-2: 238 242 246;
+  --c-bg-elev-3: 226 232 240;
+  --c-border: 221 227 235;
+  --c-border-soft: 231 235 240;
+
+  --c-text: 22 33 58;
+  --c-text-soft: 58 74 99;
+  --c-muted: 100 116 139;
+  --c-muted-2: 136 150 168;
+
+  --c-brand: 27 94 112; /* #1B5E70 */
+  --c-brand-dark: 18 66 80;
+
+  --c-zdc: 47 111 222; /* #2F6FDE */
+  --c-zdc-soft: 160 190 240;
+  --c-uic: 22 160 106; /* #16A06A */
+  --c-uic-soft: 150 214 186;
+
+  --c-red: 220 38 38;
+  --c-amber: 217 119 6;
+  --c-green: 22 163 74;
+
+  color-scheme: light;
+}
+
+.dark {
+  --c-bg: 15 23 42;
+  --c-bg-elev: 30 41 59;
+  --c-bg-elev-2: 36 48 73;
+  --c-bg-elev-3: 44 59 87;
+  --c-border: 45 59 82;
+  --c-border-soft: 31 45 68;
+
+  --c-text: 241 245 249;
+  --c-text-soft: 203 213 225;
+  --c-muted: 148 163 184;
+  --c-muted-2: 100 116 139;
+
+  --c-brand: 94 182 204;
+  --c-brand-dark: 58 140 162;
+
+  --c-zdc: 96 148 240;
+  --c-zdc-soft: 49 78 130;
+  --c-uic: 52 196 136;
+  --c-uic-soft: 30 98 72;
+
+  --c-red: 242 83 109;
+  --c-amber: 245 158 11;
+  --c-green: 52 196 136;
+
+  color-scheme: dark;
+}

@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useData } from '@/state/dataContext';
+import { HomePage } from '@/dashboard/HomePage';
 import { LineListPage } from '@/dashboard/LineListPage';
 import { SupervisoryPage } from '@/dashboard/SupervisoryPage';
 
@@ -24,9 +25,10 @@ export default function App() {
   }
   return (
     <Routes>
+      <Route path="/" element={<HomePage ds={data.data} />} />
       <Route path="/line-list" element={<LineListPage ds={data.data} />} />
       <Route path="/supervisory" element={<SupervisoryPage ds={data.data} />} />
-      <Route path="*" element={<Navigate to="/line-list" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

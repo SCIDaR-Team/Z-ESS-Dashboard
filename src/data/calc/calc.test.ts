@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ChildRecord, ChecklistReport, RawDataset } from '../types';
 import { normalise, linkChildren } from '../normalise';
 import { resolvePeriod, previousPeriod } from '../period';
-import { summariseLineList, pathwayRates } from './lineList';
+import { summariseLineList, pathwayRates, waitingSplit } from './lineList';
 import { summariseSupervisory, supervisoryRates } from './supervisory';
 import { summariseTargets, progress } from './targets';
 import { resolveLga, lgasIn } from '../reference/geography';
@@ -134,6 +134,8 @@ describe('line list', () => {
     expect(r.referralCompletion).toBeCloseTo(25);
     expect(r.notVaccinated).toBe(3);
     expect(r.referredPending).toBe(3);
+    // Waiting = ZDC 3, 4, 6 and UIC 5; of those, 3 and 4 were referred.
+    expect(waitingSplit(ds, all, sep)).toEqual({ referred: 2, notReferred: 2 });
 
     // Same cohort, later cut-off: child 4 now completes.
     const toDate = summariseLineList(ds, all, resolvePeriod('to-date', meta));

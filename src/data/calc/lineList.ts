@@ -109,3 +109,24 @@ export function pathwayRates(c: PathwayCounts): PathwayRates {
     referredPending: c.referred - c.vaccinatedAfterReferral,
   };
 }
+
+export interface WaitingSplit {
+  /** Referred by the cut-off but not yet vaccinated. */
+  referred: number;
+  /** Not referred and not vaccinated by the cut-off. */
+  notReferred: number;
+}
+
+/** Children still waiting (identified, not vaccinated), split by whether they have been referred. */
+export function waitingSplit(ds: Dataset, scope: Scope, period: Period): WaitingSplit {
+  const out: WaitingSplit = { referred: 0, notReferred: 0 };
+  for (const c of ds.children) {
+    if (c.identifiedDate < period.start || c.identifiedDate > period.cutoff) continue;
+    if (!inScope(c, scope)) continue;
+    const m = milestonesAt(c, period.cutoff);
+    if (m.vaccinated) continue;
+    if (m.referred) out.referred++;
+    else out.notReferred++;
+  }
+  return out;
+}

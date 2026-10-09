@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { NavLink } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import {
   AlertTriangle,
   CalendarDays,
@@ -91,11 +91,13 @@ export function Shell({
   const panel = (
     <>
       <div className="flex items-center gap-2.5 px-5 pb-5 pt-6">
-        <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-xl bg-[#3D5AFE] text-[15px] font-extrabold text-white">Z</span>
-        <div className="min-w-0 leading-tight">
-          <p className="text-[16px] font-extrabold text-white">Z-ESS</p>
-          <p className="text-[11.5px] text-[#8A97B1]">Zero-dose tracker</p>
-        </div>
+        <Link to="/" title="Home" className="flex min-w-0 items-center gap-2.5 rounded-xl">
+          <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-xl bg-[#3D5AFE] text-[15px] font-extrabold text-white">Z</span>
+          <span className="min-w-0 leading-tight">
+            <span className="block text-[16px] font-extrabold text-white">Z-ESS</span>
+            <span className="block text-[11.5px] text-[#8A97B1]">Zero-dose tracker</span>
+          </span>
+        </Link>
         <button type="button" onClick={() => setMobileOpen(false)} aria-label="Close filters" className="ml-auto rounded-lg p-1.5 text-[#8A97B1] hover:text-white lg:hidden">
           <X className="h-5 w-5" />
         </button>
@@ -130,7 +132,9 @@ export function Shell({
 
   const rail = (
     <div className="flex h-full flex-col items-center gap-4 py-6">
-      <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#3D5AFE] text-[15px] font-extrabold text-white">Z</span>
+      <Link to="/" title="Home" aria-label="Home" className="grid h-9 w-9 place-items-center rounded-xl bg-[#3D5AFE] text-[15px] font-extrabold text-white">
+        Z
+      </Link>
       <button type="button" onClick={toggle} title="Show filters" className="mt-2 flex flex-col items-center gap-2 rounded-xl px-2 py-3 text-[#8A97B1] hover:bg-white/5 hover:text-white">
         <SlidersHorizontal className="h-[18px] w-[18px]" aria-hidden />
         {count(true)}

@@ -3,7 +3,9 @@ import type { LucideIcon } from 'lucide-react';
 import { ArrowDownRight, ArrowRight, ArrowUpRight, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import type { Crumb, Delta, Rag } from './common';
-import { PALETTE, RAG_CELL } from './theme';
+import { RAG_CELL, TONE, type Tone } from './theme';
+
+export type { Tone };
 
 /** Soft white card: large radius, faint shadow, no border. */
 export function Card({
@@ -90,15 +92,6 @@ export function Sparkline({ values, partialLast, color, className }: { values: (
   );
 }
 
-export type Tone = 'zdc' | 'uic' | 'red' | 'green' | 'amber' | 'navy';
-const TONE: Record<Tone, { chip: string; color: string }> = {
-  zdc: { chip: 'bg-[#E0E6FF] text-[#3D5AFE]', color: PALETTE.zdc },
-  uic: { chip: 'bg-[#D2F2EB] text-[#00876F]', color: PALETTE.uic },
-  red: { chip: 'bg-[#FEE4E2] text-[#D92D20]', color: PALETTE.red },
-  green: { chip: 'bg-[#DCFAE6] text-[#079455]', color: PALETTE.green },
-  amber: { chip: 'bg-[#FEF0C7] text-[#DC6803]', color: PALETTE.amber },
-  navy: { chip: 'bg-[#E4E7EC] text-[#0F1B2D]', color: PALETTE.navy },
-};
 
 /**
  * Headline figure: icon chip and label, a large number, the change against

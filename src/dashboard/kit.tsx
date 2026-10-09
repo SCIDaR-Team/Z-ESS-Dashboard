@@ -27,14 +27,14 @@ export function Card({
     <section
       id={id}
       className={cn(
-        'min-w-0 rounded-[20px] bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_-12px_rgba(16,24,40,0.10)]',
+        'report-card min-w-0 rounded-xl border border-[#E4E9DF] bg-white p-5',
         className
       )}
     >
       {title && (
         <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
-            <h3 className="text-[15px] font-bold text-[#101828]">{title}</h3>
+            <h3 className="text-[15px] font-bold text-[#253E33]">{title}</h3>
             {hint && <p className="mt-0.5 text-[12.5px] text-[#667085]">{hint}</p>}
           </div>
           {action}
@@ -51,7 +51,7 @@ export function DeltaPill({ delta, onDark }: { delta: Delta | null; onDark?: boo
   const tone = onDark
     ? 'bg-white/15 text-white'
     : delta.good === null
-      ? 'bg-[#F2F4F7] text-[#475467]'
+      ? 'bg-[#F2F4F7] text-[#657264]'
       : delta.good
         ? 'bg-[#ECFDF3] text-[#067647]'
         : 'bg-[#FEF3F2] text-[#B42318]';
@@ -125,21 +125,21 @@ export function KpiCard({
   return (
     <div
       className={cn(
-        'flex min-w-0 flex-col rounded-[20px] p-5',
+        'report-kpi flex min-w-0 flex-col rounded-xl border border-[#E4E9DF] p-5',
         featured
-          ? 'bg-[#0F1B2D] text-white shadow-[0_12px_32px_-12px_rgba(15,27,45,0.55)]'
-          : 'bg-white text-[#101828] shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_-12px_rgba(16,24,40,0.10)]'
+          ? 'featured-kpi bg-[#204F3F] text-white'
+          : 'bg-white text-[#253E33]'
       )}
     >
       <div className="flex items-center gap-2.5">
-        <span className={cn('grid h-9 w-9 flex-shrink-0 place-items-center rounded-full', featured ? 'bg-white/10 text-white' : TONE[tone].chip)}>
+        <span className={cn('grid h-9 w-9 flex-shrink-0 place-items-center rounded-lg', featured ? 'bg-white/10 text-white' : TONE[tone].chip)}>
           <Icon className="h-[18px] w-[18px]" aria-hidden />
         </span>
-        <p className={cn('text-[13.5px] font-semibold', featured ? 'text-white/80' : 'text-[#475467]')}>{label}</p>
+        <p className={cn('text-[13.5px] font-semibold', featured ? 'text-white/80' : 'text-[#657264]')}>{label}</p>
       </div>
       <div className="mt-4 flex items-end justify-between gap-2">
         <p className="text-[34px] font-semibold leading-none tracking-[-0.02em] tabular">{value}</p>
-        <Sparkline values={spark.values} partialLast={spark.partialLast} color={featured ? '#FF8A80' : TONE[tone].color} />
+        <Sparkline values={spark.values} partialLast={spark.partialLast} color={featured ? '#C5DFA1' : TONE[tone].color} />
       </div>
       <div className={cn('mt-3 flex flex-wrap items-center gap-1.5 text-[12px]', featured ? 'text-white/60' : 'text-[#667085]')}>
         {delta ? (
@@ -168,7 +168,7 @@ export function Seg<T extends string>({ value, options, onChange, label }: { val
           onClick={() => onChange(o.value)}
           className={cn(
             'rounded-full px-3 py-1 text-[12px] font-semibold',
-            o.value === value ? 'bg-white text-[#101828] shadow-sm' : 'text-[#667085] hover:text-[#101828]'
+            o.value === value ? 'bg-white text-[#253E33] shadow-sm' : 'text-[#667085] hover:text-[#253E33]'
           )}
         >
           {o.label}
@@ -183,13 +183,13 @@ export function Crumbs({ items, onPick }: { items: Crumb[]; onPick: (c: Crumb) =
     <nav aria-label="Area" className="flex flex-wrap items-center gap-1 text-[12.5px] text-[#667085]">
       {items.map((c, i) => (
         <span key={i} className="flex items-center gap-1">
-          {i > 0 && <ChevronRight className="h-3.5 w-3.5 text-[#98A2B3]" aria-hidden />}
+          {i > 0 && <ChevronRight className="h-3.5 w-3.5 text-[#93A28C]" aria-hidden />}
           {c.patch ? (
-            <button type="button" onClick={() => onPick(c)} className="rounded px-1 font-semibold text-[#3D5AFE] hover:bg-[#EEF1FF]">
+            <button type="button" onClick={() => onPick(c)} className="rounded px-1 font-semibold text-[#597DC2] hover:bg-[#EEF1FF]">
               {c.label}
             </button>
           ) : (
-            <span className="px-1 font-semibold text-[#101828]">{c.label}</span>
+            <span className="px-1 font-semibold text-[#253E33]">{c.label}</span>
           )}
         </span>
       ))}

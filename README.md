@@ -10,7 +10,7 @@ The **Period** filter offers This month, Last month, Last 3 months (complete mon
 
 Click any LGA in a list or scorecard to drill into its wards and settlements; the breadcrumb at the top steps back out. Scorecard rates are coloured on track (≥ 75%), watch (60–75%) or behind (< 60%). Each page ends with its data-quality checks.
 
-Design: a full-height navy filter panel (collapsible), a one-row white header, and soft white cards on a pale page, set in Plus Jakarta Sans. Headline cards show the change against the previous period of the same length (a partial month is compared with the same days of the month before) and a sparkline of complete months; one featured card per page draws the eye. Scorecards colour whole cells on track / watch / behind.
+Design: a warm white workspace with forest-green accents, a persistent left navigation, and Plus Jakarta Sans. The overview puts vaccination progress, headline counts, the child journey and follow-up priorities first, with direct links into both dashboards. Reports share the same navigation, a collapsible filter panel, and restrained cards. Blue identifies ZDC and teal identifies UIC; status colours retain their meaning. On mobile, navigation and filters move into a drawer. Each headline report card keeps its previous-period comparison and monthly sparkline.
 
 Stack: Vite + React 18 + TypeScript + Tailwind + zustand, tested with vitest — the same as the NPHCDA and ERA dashboards.
 

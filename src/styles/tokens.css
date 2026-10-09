@@ -7,19 +7,19 @@
 
 :root,
 .light {
-  --c-bg: 244 246 249;
+  --c-bg: 246 247 243;
   --c-bg-elev: 255 255 255;
   --c-bg-elev-2: 238 242 246;
   --c-bg-elev-3: 226 232 240;
   --c-border: 221 227 235;
   --c-border-soft: 231 235 240;
 
-  --c-text: 22 33 58;
+  --c-text: 37 62 51;
   --c-text-soft: 58 74 99;
   --c-muted: 100 116 139;
   --c-muted-2: 136 150 168;
 
-  --c-brand: 27 94 112; /* #1B5E70 */
+  --c-brand: 34 102 78; /* #1B5E70 */
   --c-brand-dark: 18 66 80;
 
   --c-zdc: 47 111 222; /* #2F6FDE */

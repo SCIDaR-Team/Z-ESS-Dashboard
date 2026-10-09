@@ -149,7 +149,7 @@ export function SupervisoryPage({ ds }: { ds: Dataset }) {
                         className="absolute inset-y-0 left-0 rounded-full"
                         style={{ width: `${((p.achievement ?? 0) / maxAch) * 100}%`, background: group === 'zdc' ? PALETTE.zdc : PALETTE.uic }}
                       />
-                      <span className="absolute inset-y-[-3px] w-0.5 bg-[#0F1B2D]" style={{ left: `${(100 / maxAch) * 100}%` }} title="Target" />
+                      <span className="absolute inset-y-[-3px] w-0.5 bg-[#204F3F]" style={{ left: `${(100 / maxAch) * 100}%` }} title="Target" />
                     </span>
                     <span className="flex items-center justify-end gap-2 text-[12px] text-[#667085] tabular">
                       {fmtInt(p.achieved)}/{fmtInt(p.target)}
@@ -164,7 +164,7 @@ export function SupervisoryPage({ ds }: { ds: Dataset }) {
         </Card>
 
         <div className="flex flex-col gap-4">
-          <Card title="Community engagement" hint="Cases identified in the period">
+          <Card className="shrink-0" title="Community engagement" hint="Cases identified in the period">
             <Funnel
               title="Non-compliant households"
               steps={[
@@ -186,13 +186,13 @@ export function SupervisoryPage({ ds }: { ds: Dataset }) {
               rate={R.rumourResolution}
             />
           </Card>
-          <Card title="Other antigens" hint={`Doses · ${periodRangeLabel(period)}`}>
-            <ul className="flex flex-col gap-1.5 text-[12.5px]">
+          <Card className="flex flex-1 flex-col" title="Other antigens" hint={`Doses · ${periodRangeLabel(period)}`}>
+            <ul className="flex flex-1 flex-col justify-between gap-1.5 text-[12.5px]">
               {OTHER_ANTIGENS.map((a) => (
                 <li key={a} className="grid grid-cols-[56px_minmax(0,1fr)_56px] items-center gap-2">
                   <span className="font-semibold">{a}</span>
                   <span className="h-2 rounded-full bg-[#EEF1F6]">
-                    <span className="block h-full rounded-full bg-[#0F1B2D]" style={{ width: `${(T.doses[a] / maxDose) * 100}%` }} />
+                    <span className="block h-full rounded-full bg-[#204F3F]" style={{ width: `${(T.doses[a] / maxDose) * 100}%` }} />
                   </span>
                   <span className="text-right tabular">{fmtInt(T.doses[a])}</span>
                 </li>
@@ -221,9 +221,9 @@ export function SupervisoryPage({ ds }: { ds: Dataset }) {
                 const patch = drill(r.key);
                 const num = (v: number) => <td className={NUM_CELL}>{fmtInt(v)}</td>;
                 const cell = (v: number | null, rg: Rag) => <td className={cn(CELL, RAG_CELL[rg])}>{fmtPct(v)}</td>;
-                const none = <td className="text-center text-[#98A2B3]">—</td>;
+                const none = <td className="text-center text-[#93A28C]">—</td>;
                 return (
-                  <tr key={r.key} onClick={() => patch && set(patch)} className={cn(patch && 'cursor-pointer [&>td:first-child]:hover:text-[#3D5AFE]')}>
+                  <tr key={r.key} onClick={() => patch && set(patch)} className={cn(patch && 'cursor-pointer [&>td:first-child]:hover:text-[#597DC2]')}>
                     <td className="px-2 py-1.5 font-semibold">{r.label}</td>
                     {r.reports === 0 ? <td className={cn(CELL, 'bg-[#FDECEC] text-[#B4232A]')}>None</td> : num(r.reports)}
                     {num(r.settlements)}
@@ -239,7 +239,7 @@ export function SupervisoryPage({ ds }: { ds: Dataset }) {
                 );
               })}
               <tr className="text-[13px]">
-                <td className="border-t-2 border-[#0F1B2D] px-2 py-2 font-extrabold">{totalLabel}</td>
+                <td className="border-t-2 border-[#204F3F] px-2 py-2 font-extrabold">{totalLabel}</td>
                 <td className={TOTAL_CELL}>{fmtInt(T.reports)}</td>
                 <td className={TOTAL_CELL}>{fmtInt(T.settlements)}</td>
                 <td className={TOTAL_CELL}>{fmtInt(T.zdcIdentified)}</td>
@@ -293,12 +293,12 @@ export function SupervisoryPage({ ds }: { ds: Dataset }) {
                 const patch = drill(r.key);
                 // A subset larger than its total is an entry error: flag it in place.
                 const sub = (v: number, total: number) => (
-                  <td className={cn(CELL, v > total ? 'bg-[#FDECEC] text-[#B4232A]' : 'bg-[#EEF1FF] text-[#3D5AFE]')} title={v > total ? 'More than the total doses given — flagged for review' : undefined}>
+                  <td className={cn(CELL, v > total ? 'bg-[#FDECEC] text-[#B4232A]' : 'bg-[#EEF1FF] text-[#597DC2]')} title={v > total ? 'More than the total doses given — flagged for review' : undefined}>
                     {fmtInt(v)}
                   </td>
                 );
                 return (
-                  <tr key={r.key} onClick={() => patch && set(patch)} className={cn(patch && 'cursor-pointer [&>td:first-child]:hover:text-[#3D5AFE]')}>
+                  <tr key={r.key} onClick={() => patch && set(patch)} className={cn(patch && 'cursor-pointer [&>td:first-child]:hover:text-[#597DC2]')}>
                     <td className="px-2 py-1.5 font-semibold">{r.label}</td>
                     {ANTIGENS.map((a) => (
                       <Fragment key={a}>
@@ -311,7 +311,7 @@ export function SupervisoryPage({ ds }: { ds: Dataset }) {
                 );
               })}
               <tr className="text-[13px]">
-                <td className="border-t-2 border-[#0F1B2D] px-2 py-2 font-extrabold">{totalLabel}</td>
+                <td className="border-t-2 border-[#204F3F] px-2 py-2 font-extrabold">{totalLabel}</td>
                 {ANTIGENS.flatMap((a) =>
                   a === 'Penta1' ? [T.doses.Penta1, T.penta1ToZdc] : a === 'Penta3' ? [T.doses.Penta3, T.penta3ToUic] : [T.doses[a]]
                 ).map((v, i) => (
@@ -357,7 +357,7 @@ function Funnel({ title, steps, rate, rateLabel }: { title: string; steps: [stri
       <div className="flex flex-col gap-1">
         {steps.map(([label, v], i) => (
           <div key={label} className="grid grid-cols-[84px_minmax(0,1fr)_52px] items-center gap-2 text-[12.5px]">
-            <span className="text-[#475467]">{label}</span>
+            <span className="text-[#657264]">{label}</span>
             <span className="h-2.5 rounded-full bg-[#EEF1F6]">
               <span className="block h-full rounded-full" style={{ width: `${(v / max) * 100}%`, background: i === steps.length - 1 ? '#1F9D55' : '#8592A8' }} />
             </span>

@@ -99,7 +99,7 @@ export function LineListPage({ ds }: { ds: Dataset }) {
       <button
         type="button"
         onClick={() => setSort((p) => ({ key: k, dir: p.key === k ? ((-p.dir) as 1 | -1) : k === 'name' ? 1 : -1 }))}
-        className={cn('inline-flex items-center gap-0.5 hover:text-[#101828]', sort.key === k && 'text-[#101828]')}
+        className={cn('inline-flex items-center gap-0.5 hover:text-[#253E33]', sort.key === k && 'text-[#253E33]')}
       >
         {children}
         {sort.key === k && (sort.dir === 1 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}
@@ -178,8 +178,8 @@ export function LineListPage({ ds }: { ds: Dataset }) {
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[1.5fr_1fr]">
-        <Card title="Child journey" hint="Children at each step · the number lost between steps in red">
-          <div className="flex flex-col gap-5">
+        <Card className="flex flex-col" title="Child journey" hint="Children at each step · the number lost between steps in red">
+          <div className="flex flex-1 flex-col gap-5">
             <Journey label="Zero-dose (ZDC)" counts={T.zdc} color={PALETTE.zdc} light={PALETTE.zdcLight} />
             <Journey label="Under-immunised (UIC)" counts={T.uic} color={PALETTE.uic} light={PALETTE.uicLight} />
           </div>
@@ -208,14 +208,14 @@ export function LineListPage({ ds }: { ds: Dataset }) {
                 const patch = drill(r.key);
                 const c = convOf(r);
                 return (
-                  <li key={r.key} className="border-t border-[#EAECF0] first:border-t-0">
+                  <li key={r.key} className="border-t border-[#E4E9DF] first:border-t-0">
                     <button
                       type="button"
                       disabled={!patch}
                       onClick={() => patch && set(patch)}
                       className="grid w-full grid-cols-[22px_minmax(0,1fr)_auto] items-center gap-2.5 rounded-lg px-1 py-2 text-left enabled:hover:bg-[#F9FAFB]"
                     >
-                      <span className="grid h-[22px] w-[22px] place-items-center rounded-md bg-[#F2F4F7] text-[11px] font-bold text-[#475467]">{i + 1}</span>
+                      <span className="grid h-[22px] w-[22px] place-items-center rounded-md bg-[#F2F4F7] text-[11px] font-bold text-[#657264]">{i + 1}</span>
                       <span className="min-w-0">
                         <span className="block truncate text-[14px] font-semibold">{r.label}</span>
                         <span className="mt-1 flex items-center gap-2 text-[12px] text-[#667085]">
@@ -264,7 +264,7 @@ export function LineListPage({ ds }: { ds: Dataset }) {
                 const z = pathwayRates(r.zdc);
                 const u = pathwayRates(r.uic);
                 return (
-                  <tr key={r.key} onClick={() => patch && set(patch)} className={cn(patch && 'cursor-pointer [&>td:first-child]:hover:text-[#3D5AFE]')}>
+                  <tr key={r.key} onClick={() => patch && set(patch)} className={cn(patch && 'cursor-pointer [&>td:first-child]:hover:text-[#597DC2]')}>
                     <td className="px-2 py-1.5 font-semibold">{r.label}</td>
                     {showState && <td className="px-2 text-[#667085]">{getState(r.stateId)?.name}</td>}
                     {numCell(r.settlements)}
@@ -279,8 +279,8 @@ export function LineListPage({ ds }: { ds: Dataset }) {
                 );
               })}
               <tr className="text-[13px]">
-                <td className="border-t-2 border-[#0F1B2D] px-2 py-2 font-extrabold">{level === 'lga' ? 'All LGAs' : 'Total'}</td>
-                {showState && <td className="border-t-2 border-[#0F1B2D]" />}
+                <td className="border-t-2 border-[#204F3F] px-2 py-2 font-extrabold">{level === 'lga' ? 'All LGAs' : 'Total'}</td>
+                {showState && <td className="border-t-2 border-[#204F3F]" />}
                 <td className={TOTAL_CELL}>{fmtInt(T.settlements)}</td>
                 <td className={TOTAL_CELL}>{fmtInt(T.zdc.identified)}</td>
                 <td className={TOTAL_CELL}>{fmtPct(pathwayRates(T.zdc).conversion)}</td>
@@ -315,15 +315,15 @@ function Journey({ label, counts, color, light }: { label: string; counts: Pathw
   const r = pathwayRates(counts);
   const w = (n: number) => (counts.identified ? Math.max(12, (n / counts.identified) * 100) : 100);
   const step = (n: number, t: string, bg: string, fg: string) => (
-    <div className="flex h-[42px] flex-col justify-center rounded-lg px-3 text-[11.5px]" style={{ width: `${w(n)}%`, background: bg, color: fg }}>
+    <div className="flex min-h-[42px] flex-col justify-center rounded-lg px-3 text-[11.5px]" style={{ width: `${w(n)}%`, background: bg, color: fg }}>
       <b className="text-[16px] tabular">{fmtInt(n)}</b>
       {t}
     </div>
   );
-  const drop = (n: number) => (n > 0 ? <span className="whitespace-nowrap px-2.5 text-[11.5px] font-semibold text-[#E5484D]">−{fmtInt(n)}</span> : null);
+  const drop = (n: number) => (n > 0 ? <span className="self-center whitespace-nowrap px-2.5 text-[11.5px] font-semibold text-[#E5484D]">−{fmtInt(n)}</span> : null);
   return (
-    <div className="grid grid-cols-[100px_minmax(0,1fr)] items-center gap-3 sm:grid-cols-[124px_minmax(0,1fr)]">
-      <div>
+    <div className="grid flex-1 grid-cols-[100px_minmax(0,1fr)] gap-3 sm:grid-cols-[124px_minmax(0,1fr)]">
+      <div className="self-center">
         <p className="text-[13px] font-bold">{label}</p>
         <div className="mt-1.5 flex flex-col items-start gap-1">
           <Chip rag={rag(r.conversion)}>{fmtPct(r.conversion)} converted</Chip>
@@ -331,12 +331,14 @@ function Journey({ label, counts, color, light }: { label: string; counts: Pathw
         </div>
       </div>
       <div className="flex min-w-0 flex-col gap-1.5">
-        {step(counts.identified, 'Identified', light, color)}
-        <div className="flex items-center">
+        <div className="flex flex-1">
+          {step(counts.identified, 'Identified', light, color)}
+        </div>
+        <div className="flex flex-1">
           {step(counts.referred, 'Referred', `${color}B3`, '#fff')}
           {drop(counts.identified - counts.referred)}
         </div>
-        <div className="flex items-center">
+        <div className="flex flex-1">
           {step(counts.vaccinated, 'Vaccinated', color, '#fff')}
           {drop(counts.referred - counts.vaccinated)}
         </div>

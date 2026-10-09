@@ -72,7 +72,6 @@ export function LineListPage({ ds }: { ds: Dataset }) {
         const y = sortVal(b, sort.key);
         return (typeof x === 'string' ? x.localeCompare(y as string) : (x as number) - (y as number)) * sort.dir;
       }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [s.rows, sort]
   );
 

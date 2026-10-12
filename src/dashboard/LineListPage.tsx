@@ -1,69 +1,47 @@
 import { useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, Hourglass, MapPin, Syringe, UsersRound } from 'lucide-react';
+import { ArrowDown, ArrowUp, CheckCircle2, ClipboardList, Hourglass, MapPin, Syringe, TrendingUp, UsersRound } from 'lucide-react';
 import type { Dataset } from '@/data/normalise';
 import { periodRangeLabel } from '@/data/period';
-import { pathwayRates, type LineListRow, type PathwayCounts } from '@/data/calc/lineList';
+import { pathwayRates, type LineListRow } from '@/data/calc/lineList';
 import { getState } from '@/data/reference/geography';
 import { fmtInt, fmtPct } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { fromOption, lgaOptions, settlementOptions, stateOptions, toOption, wardOptions, plural } from './filters';
-import { areaName, crumbs, delta, LEVEL_LABEL, levelPlural, rag, useLineList, waiting } from './common';
+import { areaName, crumbs, LEVEL_LABEL, rag, useLineList, waiting } from './common';
 import { Check, FilterSelect, PeriodChip, PeriodFilter, Shell } from './ui';
-import { Card, Chip, ComparisonBar, Crumbs, KpiCard, RagLegend, Seg } from './kit';
-import { CELL, NUM_CELL, PALETTE, RAG_CELL, TOTAL_CELL } from './theme';
+import { Card, Crumbs, RagLegend } from './kit';
+import { CELL, NUM_CELL, RAG_CELL, TOTAL_CELL } from './theme';
+
+import { BRIEF_BLUE, BRIEF_GREEN, BriefBars, BriefKpi, BriefPanel, BriefPathway, ChartViewSelect } from './BriefLayout';
+import { fmtDateTime } from '@/lib/format';
 
 const SOURCE = 'Optimus line list';
 
 type SortKey = 'name' | 'settlements' | 'zid' | 'zref' | 'zvac' | 'zconv' | 'zrc' | 'uid' | 'uref' | 'uvac' | 'uconv' | 'urc' | 'wait';
-type ComparisonView = 'waiting' | 'conversion' | 'vaccination';
 
-const found = (t: LineListRow) => t.zdc.identified + t.uic.identified;
-const vaccinated = (t: LineListRow) => t.zdc.vaccinated + t.uic.vaccinated;
 
 export function LineListPage({ ds }: { ds: Dataset }) {
-  const { f, set, periodKey, period, s, level, drill, prev, prevPeriod, trend } = useLineList(ds);
-  const [actGroup, setActGroup] = useState<'all' | 'zdc' | 'uic'>('all');
-  const [comparisonView, setComparisonView] = useState<ComparisonView>('waiting');
-  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'wait', dir: -1 });
+  const { f, set, periodKey, period, s, level, drill } = useLineList(ds);
+  const [group, setGroup] = useState<'zdc' | 'uic'>('zdc');
+  const [childView, setChildView] = useState<'both' | 'identified' | 'vaccinated'>('both');
+  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'name', dir: 1 });
 
   const T = s.total;
   const name = areaName(ds, f);
   const unit = LEVEL_LABEL[level];
   const showState = level === 'lga' && !f.stateId;
-  const cmp = prevPeriod?.label ?? null;
-  const spark = (pick: (t: LineListRow) => number | null) => ({
-    values: trend.map((m) => pick(m.total)),
-    partialLast: trend[trend.length - 1]?.partial ?? false,
-  });
-  const reached = s.rows.filter((r) => r.settlements > 0).length;
-  // "Programme to date" has nothing before it; say what the trend line shows instead.
-  const fallback = `Monthly trend since ${trend[0]?.label ?? ''}`;
-
-  const waitOf = (r: LineListRow) =>
-    actGroup === 'zdc' ? pathwayRates(r.zdc).notVaccinated : actGroup === 'uic' ? pathwayRates(r.uic).notVaccinated : waiting(r);
-  const convOf = (r: LineListRow) =>
-    actGroup === 'zdc'
-      ? pathwayRates(r.zdc).conversion
-      : actGroup === 'uic'
-        ? pathwayRates(r.uic).conversion
-        : found(r) === 0
-          ? null
-          : (vaccinated(r) / found(r)) * 100;
-  const foundOf = (r: LineListRow) => actGroup === 'all' ? found(r) : r[actGroup].identified;
-  const vaccinatedOf = (r: LineListRow) => actGroup === 'all' ? vaccinated(r) : r[actGroup].vaccinated;
-  const act = comparisonView === 'waiting'
-    ? [...s.rows].filter((r) => foundOf(r) > 0).sort((a, b) => waitOf(b) - waitOf(a)).slice(0, 7)
-    : [...s.rows].sort((a, b) => comparisonView === 'conversion'
-      ? (convOf(a) ?? Infinity) - (convOf(b) ?? Infinity) || a.label.localeCompare(b.label)
-      : foundOf(b) - foundOf(a) || a.label.localeCompare(b.label));
-  const maxWait = Math.max(1, ...act.map(waitOf));
-  const maxFound = Math.max(1, ...act.map(foundOf));
-  const comparisonTitle = comparisonView === 'waiting' ? 'Where to act first'
-    : comparisonView === 'conversion' ? `Conversion by ${unit}` : `Identified vs vaccinated by ${unit}`;
-  const comparisonHint = comparisonView === 'waiting'
-    ? `${levelPlural(level)[0].toUpperCase()}${levelPlural(level).slice(1)} with the most children still waiting · click to drill in`
-    : comparisonView === 'conversion' ? 'Lowest conversion first · vaccinated ÷ identified · click to drill in'
-      : 'Children in the same identification cohort · highest identified first · click to drill in';
+  const groupLabel = group.toUpperCase();
+  const groupColor = group === 'zdc' ? BRIEF_BLUE : BRIEF_GREEN;
+  const childTitle = `${groupLabel} ${childView === 'both' ? 'identified vs vaccinated' : childView} by ${unit}`;
+  const childSeries = [
+    ...(childView !== 'vaccinated' ? [{ label: `${groupLabel} identified`, color: groupColor }] : []),
+    ...(childView !== 'identified' ? [{ label: `${groupLabel} vaccinated`, color: '#2C9466' }] : []),
+  ];
+  const conversionRows = [...s.rows].sort((a, b) => (pathwayRates(b[group]).conversion ?? -1) - (pathwayRates(a[group]).conversion ?? -1));
+  const referrals = T.zdc.referred + T.uic.referred;
+  const completedReferrals = T.zdc.vaccinatedAfterReferral + T.uic.vaccinatedAfterReferral;
+  const pick = level === 'settlement' && f.settlementId ? undefined : (key: string) => { const patch = drill(key); if (patch) set(patch); };
+  const context = `${periodRangeLabel(period)} · ${SOURCE}`;
 
   const sortVal = (r: LineListRow, k: SortKey): number | string => {
     const z = pathwayRates(r.zdc);
@@ -136,6 +114,7 @@ export function LineListPage({ ds }: { ds: Dataset }) {
         subtitle: 'Zero-dose (ZDC) and under-immunised (UIC) children: identification, referral and vaccination',
         source: SOURCE,
       }}
+      inlineFilters
       meta={ds.meta}
       filters={filters}
       period={<PeriodChip value={periodKey} onChange={(k) => set({ period: k })} meta={ds.meta} />}
@@ -143,144 +122,56 @@ export function LineListPage({ ds }: { ds: Dataset }) {
       onResetFilters={() => set({ stateId: null, lgaId: null, wardId: null, settlementId: null, period: null })}
     >
       <Crumbs items={crumbs(ds, f)} onPick={(c) => c.patch && set(c.patch)} />
-      <h2 className="mt-1.5 text-[22px] font-bold tracking-[-0.01em]">Where do we stand in {name}?</h2>
-      <p className="mt-0.5 text-[13.5px] text-[#667085]">
-        {period.label}: children identified {periodRangeLabel(period)}, with referrals and verified vaccinations counted to the cut-off.
-      </p>
-
-      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard
-          label="Children found"
-          value={fmtInt(found(T))}
-          icon={UsersRound}
-          tone="zdc"
-          delta={delta(found(T), prev && found(prev), 'count')}
-          compareLabel={cmp}
-          fallback={fallback}
-          spark={spark(found)}
-          sub={`${fmtInt(T.zdc.identified)} zero-dose · ${fmtInt(T.uic.identified)} under-immunised`}
-        />
-        <KpiCard
-          label="Children vaccinated"
-          value={fmtInt(vaccinated(T))}
-          icon={Syringe}
-          tone="green"
-          delta={delta(vaccinated(T), prev && vaccinated(prev), 'count')}
-          compareLabel={cmp}
-          fallback={fallback}
-          spark={spark(vaccinated)}
-          sub={`${fmtPct(found(T) ? (vaccinated(T) / found(T)) * 100 : null)} of children found`}
-        />
-        <KpiCard
-          label="Still waiting"
-          value={fmtInt(waiting(T))}
-          icon={Hourglass}
-          tone="red"
-          featured
-          delta={delta(waiting(T), prev && waiting(prev), 'count', false)}
-          compareLabel={cmp}
-          fallback={fallback}
-          spark={spark(waiting)}
-          sub={`${fmtInt(pathwayRates(T.zdc).referredPending + pathwayRates(T.uic).referredPending)} awaiting a post-referral vaccination`}
-          details={
-            <table className="mt-3 w-full border-t border-white/15 text-[11px] tabular" aria-label="Follow-up breakdown">
-              <thead className="text-white/65">
-                <tr><th scope="col" className="pb-1 pt-2 text-left font-medium">Group</th><th scope="col" className="pb-1 pt-2 text-right font-medium">Unvaccinated</th><th scope="col" className="pb-1 pt-2 text-right font-medium" title="Referred minus children vaccinated after referral">Referral pending</th></tr>
-              </thead>
-              <tbody>{(['zdc', 'uic'] as const).map((k) => {
-                const p = pathwayRates(T[k]);
-                return <tr key={k}><th scope="row" className="py-1 text-left font-medium">{k.toUpperCase()}</th><td className="py-1 text-right">{fmtInt(p.notVaccinated)}</td><td className="py-1 text-right">{fmtInt(p.referredPending)}</td></tr>;
-              })}</tbody>
-            </table>
-          }
-        />
-        <KpiCard
-          label="Settlements reached"
-          value={fmtInt(T.settlements)}
-          icon={MapPin}
-          tone="navy"
-          delta={delta(T.settlements, prev?.settlements, 'count')}
-          compareLabel={cmp}
-          fallback={fallback}
-          spark={spark((t) => t.settlements)}
-          sub={`Across ${reached} ${reached === 1 ? (level === 'lga' ? 'LGA' : unit.toLowerCase()) : levelPlural(level)}`}
-        />
+      <p className="brief-report-context">{name} · {context} · Data cut-off: {ds.meta.asOf} · Last refresh: {fmtDateTime(ds.meta.lastRefresh)}</p>
+      <div className="brief-headlines brief-line-headlines" aria-label="Line-list headline indicators">
+        <BriefKpi label="Settlements covered" value={fmtInt(T.settlements)} icon={MapPin} />
+        <BriefKpi label="ZDC identified" value={fmtInt(T.zdc.identified)} icon={UsersRound} />
+        <BriefKpi label="ZDC referred" value={fmtInt(T.zdc.referred)} icon={ClipboardList} />
+        <BriefKpi label="ZDC vaccinated" value={fmtInt(T.zdc.vaccinated)} icon={Syringe} color={BRIEF_GREEN} />
+        <BriefKpi label="ZDC conversion %" value={fmtPct(pathwayRates(T.zdc).conversion)} icon={TrendingUp} color={BRIEF_GREEN} />
+        <BriefKpi label="UIC identified" value={fmtInt(T.uic.identified)} icon={UsersRound} color="#E99A2E" />
+        <BriefKpi label="UIC referred" value={fmtInt(T.uic.referred)} icon={ClipboardList} />
+        <BriefKpi label="UIC vaccinated" value={fmtInt(T.uic.vaccinated)} icon={Syringe} color={BRIEF_GREEN} />
+        <BriefKpi label="UIC conversion %" value={fmtPct(pathwayRates(T.uic).conversion)} icon={TrendingUp} color={BRIEF_GREEN} />
+        <BriefKpi label="Referral completion %" value={fmtPct(referrals ? completedReferrals / referrals * 100 : null)} icon={CheckCircle2} color={BRIEF_GREEN} />
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[1.5fr_1fr]">
-        <Card className="flex flex-col" title="Child journey" hint="Children at each step · the number lost between steps in red">
-          <div className="flex flex-1 flex-col gap-5">
-            <Journey label="Zero-dose (ZDC)" counts={T.zdc} color={PALETTE.zdc} light={PALETTE.zdcLight} />
-            <Journey label="Under-immunised (UIC)" counts={T.uic} color={PALETTE.uic} light={PALETTE.uicLight} />
-          </div>
-        </Card>
-        <Card
-          title={comparisonTitle}
-          hint={comparisonHint}
-          action={
-            <Seg
-              label="Children"
-              value={actGroup}
-              onChange={setActGroup}
-              options={[
-                { value: 'all', label: 'All' },
-                { value: 'zdc', label: 'ZDC' },
-                { value: 'uic', label: 'UIC' },
-              ]}
-            />
-          }
-        >
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <label className="flex items-center gap-2 text-[12px] text-[#657264]">
-              View
-              <select aria-label="Comparison view" value={comparisonView} onChange={(e) => setComparisonView(e.target.value as ComparisonView)} className="rounded-lg border border-[#E4E9DF] bg-white px-2 py-1.5 text-[#253E33]">
-                <option value="waiting">Follow-up priority</option><option value="conversion">Conversion ranking</option><option value="vaccination">Identified vs vaccinated</option>
-              </select>
-            </label>
-            {comparisonView === 'vaccination' && <span className="flex gap-3 text-[11px] text-[#657264]"><span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-[#B3C8BC]" />Identified</span><span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-[#37896F]" />Vaccinated</span></span>}
-          </div>
-          {act.length === 0 ? (
-            <p className="py-8 text-center text-[13px] text-[#667085]">No children identified here in this period.</p>
-          ) : (
-            <ol className="flex max-h-[450px] flex-col overflow-y-auto">
-              {act.map((r, i) => {
-                const patch = drill(r.key);
-                const c = convOf(r);
-                return (
-                  <li key={r.key} className="border-t border-[#E4E9DF] first:border-t-0">
-                    <button
-                      type="button"
-                      disabled={!patch}
-                      onClick={() => patch && set(patch)}
-                      className="grid w-full grid-cols-[22px_minmax(0,1fr)_auto] items-center gap-2.5 rounded-lg px-1 py-2 text-left enabled:hover:bg-[#F9FAFB]"
-                    >
-                      <span className="grid h-[22px] w-[22px] place-items-center rounded-md bg-[#F2F4F7] text-[11px] font-bold text-[#657264]">{i + 1}</span>
-                      <span className="min-w-0">
-                        <span className="block truncate text-[14px] font-semibold">{r.label}</span>
-                        {comparisonView === 'vaccination' ? <span className="mt-1.5 flex flex-col gap-1.5">
-                          <ComparisonBar label="Identified" value={foundOf(r)} max={maxFound} color="#B3C8BC" />
-                          <ComparisonBar label="Vaccinated" value={vaccinatedOf(r)} max={maxFound} color="#37896F" />
-                        </span> : <span className="mt-1 flex items-center gap-2 text-[12px] text-[#667085]">
-                          <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#F2F4F7]">
-                            <span className="block h-full rounded-full" style={{ width: `${comparisonView === 'conversion' ? c ?? 0 : (waitOf(r) / maxWait) * 100}%`, background: comparisonView === 'conversion' ? PALETTE.zdc : '#E5484D' }} />
-                          </span>
-                          {comparisonView === 'waiting' && <span className="whitespace-nowrap tabular">{fmtInt(waitOf(r))} waiting</span>}
-                        </span>}
-                      </span>
-                      <Chip rag={rag(c)}>{fmtPct(c, 0)} converted</Chip>
-                    </button>
-                  </li>
-                );
-              })}
-            </ol>
-          )}
-          <p className="mt-3 text-[11px] text-[#667085]">{comparisonView === 'waiting' ? 'Top 7 areas' : `All ${act.length} ${levelPlural(level)} · scroll to compare`} · {periodRangeLabel(period)} · {SOURCE}</p>
-        </Card>
+      <section className="brief-follow-up" aria-labelledby="follow-up-heading">
+        <h3 id="follow-up-heading">Follow-up required</h3>
+        <div className="brief-follow-up-grid">
+          <BriefKpi label="Unconverted ZDC" value={fmtInt(pathwayRates(T.zdc).notVaccinated)} icon={UsersRound} color="#D95864" />
+          <BriefKpi label="Referred ZDC pending vaccination" value={fmtInt(pathwayRates(T.zdc).referredPending)} icon={Hourglass} color="#D95864" />
+          <BriefKpi label="Unconverted UIC" value={fmtInt(pathwayRates(T.uic).notVaccinated)} icon={UsersRound} color="#E99A2E" />
+          <BriefKpi label="Referred UIC pending vaccination" value={fmtInt(pathwayRates(T.uic).referredPending)} icon={Hourglass} color="#D95864" />
+        </div>
+      </section>
+
+      <div className="brief-chart-controls"><span>Children identified {periodRangeLabel(period)}; outcomes verified to {ds.meta.asOf}.</span></div>
+      <div className="brief-line-charts">
+        <BriefPanel title={childTitle} action={<ChartViewSelect label="Line-list child view" value={`${group}:${childView}`} onChange={(value) => {
+          const [nextGroup, nextView] = value.split(':') as [typeof group, typeof childView];
+          setGroup(nextGroup); setChildView(nextView);
+        }} options={[
+          { value: 'zdc:both', label: 'ZDC · Both outcomes' }, { value: 'zdc:identified', label: 'ZDC · Identified only' }, { value: 'zdc:vaccinated', label: 'ZDC · Vaccinated only' },
+          { value: 'uic:both', label: 'UIC · Both outcomes' }, { value: 'uic:identified', label: 'UIC · Identified only' }, { value: 'uic:vaccinated', label: 'UIC · Vaccinated only' },
+        ]} />}>
+          <BriefBars label={`${groupLabel} ${childView === 'both' ? 'identified vs vaccinated' : childView}`} rows={s.rows.map((r) => ({ key: r.key, label: r.label, values: [
+            ...(childView !== 'vaccinated' ? [r[group].identified] : []), ...(childView !== 'identified' ? [r[group].vaccinated] : []),
+          ] }))} series={childSeries} onPick={pick} />
+        </BriefPanel>
+        <BriefPanel title={`${groupLabel} conversion rate by ${unit}`}>
+          <BriefBars label={`${groupLabel} conversion ranking`} rate rows={conversionRows.map((r) => ({ key: r.key, label: r.label, values: [pathwayRates(r[group]).conversion] }))} series={[{ label: 'Vaccinated ÷ identified', color: groupColor }]} onPick={pick} />
+        </BriefPanel>
+        <BriefPathway label="ZDC" counts={T.zdc} color={BRIEF_BLUE} />
+        <BriefPathway label="UIC" counts={T.uic} color={BRIEF_GREEN} />
+        <BriefPanel title={`Settlement coverage by ${unit}`}>
+          <BriefBars label="Settlement coverage" rows={s.rows.map((r) => ({ key: r.key, label: r.label, values: [r.settlements] }))} series={[{ label: 'Settlements covered', color: BRIEF_GREEN }]} onPick={pick} />
+        </BriefPanel>
       </div>
 
       <Card
         className="mt-4"
-        title={`${unit} scorecard`}
+        title={`${unit} performance summary`}
         hint={`Every ${unitLower} in ${name} · click a column to sort${level !== 'settlement' ? ', a row to drill in' : ''}`}
       >
         <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Scroll line-list scorecard">
@@ -292,12 +183,12 @@ export function LineListPage({ ds }: { ds: Dataset }) {
                 </Th>
                 {showState && <th className="px-2 text-left font-semibold">State</th>}
                 <Th k="settlements">Settlements</Th>
-                <Th k="zid">ZDC found</Th>
+                <Th k="zid">ZDC identified</Th>
                 <Th k="zref">ZDC referred</Th>
                 <Th k="zvac">ZDC vaccinated</Th>
                 <Th k="zconv">ZDC conversion</Th>
                 <Th k="zrc">ZDC referral completion</Th>
-                <Th k="uid">UIC found</Th>
+                <Th k="uid">UIC identified</Th>
                 <Th k="uref">UIC referred</Th>
                 <Th k="uvac">UIC vaccinated</Th>
                 <Th k="uconv">UIC conversion</Th>
@@ -363,42 +254,5 @@ export function LineListPage({ ds }: { ds: Dataset }) {
         </ul>
       </Card>
     </Shell>
-  );
-}
-
-function Journey({ label, counts, color, light }: { label: string; counts: PathwayCounts; color: string; light: string }) {
-  const r = pathwayRates(counts);
-  const w = (n: number) => (counts.identified ? Math.max(12, (n / counts.identified) * 100) : 100);
-  const step = (n: number, t: string, bg: string, fg: string) => (
-    <div className="flex min-h-[42px] flex-col justify-center rounded-lg px-3 text-[11.5px]" style={{ width: `${w(n)}%`, background: bg, color: fg }}>
-      <b className="text-[16px] tabular">{fmtInt(n)}</b>
-      {t}
-    </div>
-  );
-  const drop = (n: number) => (n > 0 ? <span className="self-center whitespace-nowrap px-2.5 text-[11.5px] font-semibold text-[#E5484D]">−{fmtInt(n)}</span> : null);
-  return (
-    <div className="grid flex-1 grid-cols-[100px_minmax(0,1fr)] gap-3 sm:grid-cols-[124px_minmax(0,1fr)]">
-      <div className="self-center">
-        <p className="text-[13px] font-bold">{label}</p>
-        <div className="mt-1.5 flex flex-col items-start gap-1">
-          <Chip rag={rag(r.conversion)}>{fmtPct(r.conversion)} converted</Chip>
-          <Chip rag={rag(r.referralCompletion)}>{fmtPct(r.referralCompletion)} of referred</Chip>
-        </div>
-      </div>
-      <div className="flex min-w-0 flex-col gap-1.5">
-        <div className="flex flex-1">
-          {step(counts.identified, 'Identified', light, color)}
-        </div>
-        <div className="flex flex-1">
-          {step(counts.referred, 'Referred', `${color}B3`, '#fff')}
-          {drop(counts.identified - counts.referred)}
-        </div>
-        <div className="flex flex-1">
-          {step(counts.vaccinated, 'Vaccinated', color, '#fff')}
-          {drop(counts.referred - counts.vaccinated)}
-        </div>
-        <p className="text-[11px] text-[#657264]">Vaccinated after referral: <b className="tabular">{fmtInt(counts.vaccinatedAfterReferral)}</b></p>
-      </div>
-    </div>
   );
 }

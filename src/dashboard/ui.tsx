@@ -7,12 +7,13 @@ import { useUiStore } from '@/store/uiStore';
 import type { DatasetMeta } from '@/data/types';
 import type { Option } from './filters';
 import { WorkspaceNav } from './WorkspaceNav';
+import { AppearanceControl } from './AppearanceControl';
 
 export interface PageInfo { title: string; subtitle: string; source: string; }
 
-export function Shell({ page, meta, filters, period, activeFilters, onResetFilters, children }: {
+export function Shell({ page, meta, filters, period, activeFilters, onResetFilters, children, inlineFilters = false }: {
   page: PageInfo; meta: DatasetMeta; filters: ReactNode; period: ReactNode;
-  activeFilters: number; onResetFilters: () => void; children: ReactNode;
+  activeFilters: number; onResetFilters: () => void; children: ReactNode; inlineFilters?: boolean;
 }) {
   const collapsed = useUiStore((s) => s.filtersCollapsed);
   const toggle = useUiStore((s) => s.toggleFilters);
@@ -29,18 +30,18 @@ export function Shell({ page, meta, filters, period, activeFilters, onResetFilte
     [Database, 'Last refresh', fmtDateTime(meta.lastRefresh)],
     [FileText, 'Source', page.source],
   ];
-  return <div className={cn('workspace report-workspace', collapsed && 'sidebar-collapsed')}>
+  return <div className={cn('workspace report-workspace', inlineFilters && 'brief-workspace', collapsed && 'sidebar-collapsed')}>
     <a href="#report-content" className="skip-link">Skip to content</a>
     <aside aria-label="Workspace and filters" className={cn('workspace-sidebar report-sidebar', mobileOpen && 'mobile-open')}>
       <div className={cn('expanded-sidebar-content', collapsed && 'desktop-hidden')}><WorkspaceNav onClose={() => setMobileOpen(false)}>
-        <div className="report-filter-section"><div className="filter-section-heading"><SlidersHorizontal size={15} /><span>REFINE YOUR VIEW</span>{activeFilters > 0 && <b>{activeFilters}</b>}</div><div className="report-filter-controls">{filters}</div><button type="button" className="reset-filter-button" onClick={onResetFilters} disabled={activeFilters === 0}><RotateCcw size={14} />Reset filters</button></div>
+        {!inlineFilters && <div className="report-filter-section"><div className="filter-section-heading"><SlidersHorizontal size={15} /><span>REFINE YOUR VIEW</span>{activeFilters > 0 && <b>{activeFilters}</b>}</div><div className="report-filter-controls">{filters}</div><button type="button" className="reset-filter-button" onClick={onResetFilters} disabled={activeFilters === 0}><RotateCcw size={14} />Reset filters</button></div>}
       </WorkspaceNav></div>
       {collapsed && <div className="collapsed-sidebar-content"><WorkspaceNav compact /><button type="button" className="expand-sidebar-button" onClick={toggle} aria-label="Expand filters"><PanelLeftOpen size={19} /></button></div>}
       <button type="button" className="collapse-sidebar-button" onClick={toggle}>{collapsed ? <PanelLeftOpen size={17} /> : <><PanelLeftClose size={17} />Collapse sidebar</>}</button>
     </aside>
     {mobileOpen && <button type="button" className="nav-backdrop" aria-label="Close navigation and filters" onClick={() => setMobileOpen(false)} />}
-    <div className="workspace-body"><header className="workspace-topbar report-topbar"><div className="topbar-breadcrumb"><button type="button" className="mobile-menu-button" aria-label="Open navigation and filters" aria-expanded={mobileOpen} onClick={() => setMobileOpen(true)}><Menu size={20} /></button><span>Workspace</span><ChevronRight size={14} /><strong>{page.title}</strong></div><div className="topbar-meta">{meta.source === 'mock' && <span className="demo-badge"><i />Demo workspace</span>}<div className="report-info-control"><button type="button" className="icon-link" aria-label="Report details" aria-expanded={infoOpen} onClick={() => setInfoOpen((o) => !o)}><Info size={18} /></button>{infoOpen && <><button type="button" className="info-dismiss" aria-label="Close report details" onClick={() => setInfoOpen(false)} /><dl className="report-info-popover">{facts.map(([Icon, k, v]) => <div key={k}><Icon size={15} /><dt>{k}</dt><dd>{v}</dd></div>)}{meta.source === 'mock' && <p>Demo data — not real programme figures</p>}</dl></>}</div><span className="workspace-avatar">Z</span></div></header>
-      <main id="report-content" className="report-content"><div className="report-page-heading"><div><p className="eyebrow">PROGRAMME INTELLIGENCE</p><h1>{page.title}<span>.</span></h1><p>{page.subtitle}</p></div><div className="report-heading-actions">{period}<button type="button" className="mobile-filter-button" onClick={() => setMobileOpen(true)}><SlidersHorizontal size={15} />Filters {activeFilters > 0 && `(${activeFilters})`}</button></div></div>{children}</main>
+    <div className="workspace-body"><header className="workspace-topbar report-topbar"><div className="topbar-breadcrumb"><button type="button" className="mobile-menu-button" aria-label="Open navigation and filters" aria-expanded={mobileOpen} onClick={() => setMobileOpen(true)}><Menu size={20} /></button><span>Workspace</span><ChevronRight size={14} /><strong>{page.title}</strong></div><div className="topbar-meta">{meta.source === 'mock' && <span className="demo-badge"><i />Demo workspace</span>}<AppearanceControl /><div className="report-info-control"><button type="button" className="icon-link" aria-label="Report details" aria-expanded={infoOpen} onClick={() => setInfoOpen((o) => !o)}><Info size={18} /></button>{infoOpen && <><button type="button" className="info-dismiss" aria-label="Close report details" onClick={() => setInfoOpen(false)} /><dl className="report-info-popover">{facts.map(([Icon, k, v]) => <div key={k}><Icon size={15} /><dt>{k}</dt><dd>{v}</dd></div>)}{meta.source === 'mock' && <p>Demo data — not real programme figures</p>}</dl></>}</div><span className="workspace-avatar">Z</span></div></header>
+      <main id="report-content" className="report-content"><div className={inlineFilters ? 'brief-page-header' : undefined}><div className="report-page-heading"><div><p className="eyebrow">PROGRAMME INTELLIGENCE</p><h1>{page.title}<span>.</span></h1><p>{page.subtitle}</p></div><div className="report-heading-actions">{!inlineFilters && period}<button type="button" className="mobile-filter-button" onClick={() => setMobileOpen(true)}><SlidersHorizontal size={15} />Filters {activeFilters > 0 && `(${activeFilters})`}</button></div></div>{inlineFilters && <div className="brief-filter-bar">{filters}<button type="button" className="brief-reset" onClick={onResetFilters} disabled={activeFilters === 0}><RotateCcw size={14} />Reset</button></div>}</div>{children}</main>
     </div>
   </div>;
 }

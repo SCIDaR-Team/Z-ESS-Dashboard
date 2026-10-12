@@ -5,11 +5,24 @@ import { useData } from '@/state/dataContext';
 import { HomePage } from '@/dashboard/HomePage';
 import { LineListPage } from '@/dashboard/LineListPage';
 import { SupervisoryPage } from '@/dashboard/SupervisoryPage';
+import { useUiStore } from '@/store/uiStore';
 
 export default function App() {
   const data = useData();
   const { pathname } = useLocation();
+  const appearance = useUiStore((s) => s.appearance);
   useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  useEffect(() => {
+    const device = window.matchMedia('(prefers-color-scheme: dark)');
+    const apply = () => {
+      const dark = appearance === 'dark' || (appearance === 'system' && device.matches);
+      document.documentElement.classList.toggle('dark', dark);
+      document.documentElement.classList.toggle('light', !dark);
+    };
+    apply();
+    device.addEventListener('change', apply);
+    return () => device.removeEventListener('change', apply);
+  }, [appearance]);
 
   if (data.status === 'loading') {
     return (

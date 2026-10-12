@@ -15,6 +15,7 @@ import { useFilterStore } from '@/store/filterStore';
 import { delta, waiting } from './common';
 import { DeltaPill } from './kit';
 import { WorkspaceNav } from './WorkspaceNav';
+import { AppearanceControl } from './AppearanceControl';
 const ALL: Scope = { stateId: null, lgaId: null, wardId: null, settlementId: null };
 /** Share of the monthly target that counts as on track (the supervisory page's green band). */
 const ON_TRACK = 90;
@@ -117,7 +118,7 @@ export function HomePage({ ds }: { ds: Dataset }) {
     <div className="workspace-body">
       <header className="workspace-topbar">
         <div className="topbar-breadcrumb"><button type="button" className="mobile-menu-button" aria-label="Open navigation" aria-expanded={navOpen} onClick={() => setNavOpen(true)}><Menu size={20} /></button><span>Workspace</span><ChevronRight size={14} /><strong>Overview</strong></div>
-        <div className="topbar-meta">{meta.source === 'mock' && <span className="demo-badge"><i />Demo workspace</span>}<span className="topbar-date"><CalendarDays size={15} />{dateLabel(meta.asOf)}</span><span className="workspace-avatar" title="Z-ESS programme">Z</span></div>
+        <div className="topbar-meta">{meta.source === 'mock' && <span className="demo-badge"><i />Demo workspace</span>}<AppearanceControl /><span className="topbar-date"><CalendarDays size={15} />{dateLabel(meta.asOf)}</span><span className="workspace-avatar" title="Z-ESS programme">Z</span></div>
       </header>
       <main id="main-content" className="overview-content">
         <div className="overview-heading"><div><p className="eyebrow">THE BIG PICTURE</p><h1>Programme overview<span>.</span></h1><p>A little clarity. A bigger impact. Every child, accounted for.</p></div><span className="period-label"><CalendarDays size={15} />Programme to date</span></div>
